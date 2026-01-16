@@ -967,7 +967,7 @@ st.markdown("---")
 st.markdown(
     """
     <div style='text-align: center; padding: 20px; background: linear-gradient(135deg, #1a1d2e 0%, #2d3746 100%); border-radius: 10px;'>
-        <h3 style='color: #ffffff; margin-bottom: 10px;'>⚗️ 制药工艺流程对比系统</h3>
+        <h3 style='color: #ffffff; margin-bottom: 10px;'>⚗️ 制药工艺流程对比</h3>
         <p style='color: #b0b0b0; font-size: 0.9em;'>
             专注于展示不同制药品类的工艺差异 | 数据来源: 制药工艺专业资料整理
         </p>
