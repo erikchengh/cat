@@ -6,7 +6,7 @@ from plotly.subplots import make_subplots
 
 # 设置页面配置 - 使用暗色主题
 st.set_page_config(
-    page_title="制药工艺流程对比系统",
+    page_title="制药工艺流程对比",
     page_icon="⚗️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -180,7 +180,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 应用标题
-st.markdown('<h1 style="text-align: center; background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 20px;">⚗️ 制药工艺流程对比系统</h1>', unsafe_allow_html=True)
+st.markdown('<h1 style="text-align: center; background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 20px;">⚗️ 制药工艺流程对比</h1>', unsafe_allow_html=True)
 st.markdown('<h3 style="text-align: center; color: #b0b0b0; margin-bottom: 30px;">可视化展示不同制药品类的工艺步骤及其差异</h3>', unsafe_allow_html=True)
 
 # 定义详细的制药工艺数据库
