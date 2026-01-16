@@ -6,14 +6,14 @@ from plotly.subplots import make_subplots
 
 # 设置页面配置
 st.set_page_config(
-    page_title="制药工艺流程对比系统",
+    page_title="制药工艺流程对比",
     page_icon="⚗️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # 应用标题
-st.title("⚗️ 制药工艺流程对比系统")
+st.title("⚗️ 制药工艺流程对比")
 st.markdown("### 可视化展示不同制药品类的工艺步骤及其差异")
 
 # 定义详细的制药工艺数据库
