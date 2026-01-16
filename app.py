@@ -3,23 +3,17 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-# import matplotlib.pyplot as plt
-import matplotlib
-matplotlib.use('Agg')
-from io import BytesIO
-import base64
-import random
 
 # 设置页面配置
 st.set_page_config(
-    page_title="制药工艺流程对比",
+    page_title="制药工艺流程对比系统",
     page_icon="⚗️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # 应用标题
-st.title("⚗️ 制药工艺流程对比")
+st.title("⚗️ 制药工艺流程对比系统")
 st.markdown("### 可视化展示不同制药品类的工艺步骤及其差异")
 
 # 定义详细的制药工艺数据库
@@ -646,27 +640,16 @@ if mode == "单一产品详情":
                 
                 steps = product_info.get("工艺步骤", [])
                 
-                # 创建流程图数据
-                nodes = []
-                
-                for i, step in enumerate(steps):
-                    # 添加节点
-                    nodes.append({
-                        "id": f"step_{i}",
-                        "label": f"{i+1}. {step['name']}",
-                        "group": "steps",
-                        "title": f"关键参数: {', '.join(step.get('关键参数', []))}"
-                    })
-                
                 # 使用Plotly创建流程图
                 fig = go.Figure()
                 
                 # 计算节点位置
-                y_positions = [0.5] * len(nodes)  # 所有节点在同一水平线
-                x_positions = [i/(len(nodes)-1) if len(nodes) > 1 else 0.5 for i in range(len(nodes))]
+                y_positions = [0.5] * len(steps)  # 所有节点在同一水平线
+                x_positions = [i/(len(steps)-1) if len(steps) > 1 else 0.5 for i in range(len(steps))]
                 
                 # 添加节点
-                for i, node in enumerate(nodes):
+                for i, step in enumerate(steps):
+                    step_info = step
                     fig.add_trace(go.Scatter(
                         x=[x_positions[i]],
                         y=[y_positions[i]],
@@ -676,15 +659,15 @@ if mode == "单一产品详情":
                             color="lightblue",
                             line=dict(width=2, color="darkblue")
                         ),
-                        text=node["label"].split(". ")[1] if "." in node["label"] else node["label"],
+                        text=f"{i+1}. {step['name']}",
                         textposition="middle center",
-                        name=node["label"],
+                        name=step['name'],
                         hoverinfo="text",
-                        hovertext=node["title"]
+                        hovertext=f"关键参数: {', '.join(step.get('关键参数', []))}"
                     ))
                 
                 # 添加连接线
-                for i in range(len(nodes)-1):
+                for i in range(len(steps)-1):
                     fig.add_trace(go.Scatter(
                         x=[x_positions[i] + 0.05, x_positions[i+1] - 0.05],
                         y=[y_positions[i], y_positions[i+1]],
