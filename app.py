@@ -729,4 +729,413 @@ if mode == "单一产品详情":
                         showticklabels=False,
                         range=[0, 1]
                     ),
-                    plot_bgcolor="white
+                    plot_bgcolor="white",
+                    margin=dict(l=20, r=20, t=40, b=20)
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # 流程图说明
+                st.info("""
+                **流程图说明:**
+                - 每个方块代表一个工艺步骤
+                - 方块编号表示步骤顺序
+                - 箭头表示工艺流向
+                - 悬停查看每个步骤的关键参数
+                """)
+    
+    else:
+        st.info("请在侧边栏选择产品和分类")
+
+elif mode == "多产品对比":
+    st.header("📊 多产品工艺对比分析")
+    
+    if 'selected_comparison' in locals() and selected_comparison:
+        # 获取对比数据
+        comparison_df = PharmaceuticalProcesses.get_comparison_data(selected_comparison)
+        
+        if not comparison_df.empty:
+            # 显示对比表格
+            st.subheader("产品基本信息对比")
+            st.dataframe(
+                comparison_df,
+                column_config={
+                    "产品名称": st.column_config.TextColumn("产品名称"),
+                    "所属分类": st.column_config.TextColumn("所属分类"),
+                    "工艺步骤数": st.column_config.NumberColumn(
+                        "工艺步骤数",
+                        help="生产工艺的总步骤数"
+                    ),
+                    "估算生产周期(天)": st.column_config.NumberColumn(
+                        "生产周期(天)",
+                        help="估算的生产周期",
+                        format="%.1f"
+                    ),
+                    "成本指数": st.column_config.NumberColumn(
+                        "成本指数",
+                        help="相对成本指数"
+                    ),
+                    "质量要求指数": st.column_config.NumberColumn(
+                        "质量要求指数",
+                        help="质量控制的复杂程度"
+                    ),
+                    "主要设备数": st.column_config.NumberColumn("主要设备数")
+                },
+                use_container_width=True,
+                hide_index=True
+            )
+            
+            # 创建对比标签页
+            tab1, tab2, tab3 = st.tabs(["📈 工艺复杂度对比", "🎯 雷达图对比", "🔍 详细步骤对比"])
+            
+            with tab1:
+                # 工艺步骤数对比柱状图
+                fig1 = px.bar(
+                    comparison_df,
+                    x="产品名称",
+                    y="工艺步骤数",
+                    color="所属分类",
+                    title="各产品工艺步骤数对比",
+                    text="工艺步骤数",
+                    hover_data=["描述"]
+                )
+                
+                fig1.update_traces(textposition='outside')
+                fig1.update_layout(
+                    xaxis_title="产品名称",
+                    yaxis_title="工艺步骤数",
+                    showlegend=True
+                )
+                
+                st.plotly_chart(fig1, use_container_width=True)
+                
+                # 成本与质量要求散点图
+                fig2 = px.scatter(
+                    comparison_df,
+                    x="成本指数",
+                    y="质量要求指数",
+                    size="工艺步骤数",
+                    color="所属分类",
+                    text="产品名称",
+                    title="成本与质量要求关系分析",
+                    hover_data=["估算生产周期(天)"]
+                )
+                
+                fig2.update_traces(textposition='top center')
+                fig2.update_layout(
+                    xaxis_title="成本指数",
+                    yaxis_title="质量要求指数"
+                )
+                
+                st.plotly_chart(fig2, use_container_width=True)
+            
+            with tab2:
+                st.subheader("多维度雷达图对比")
+                
+                # 选择用于雷达图的指标
+                radar_metrics = st.multiselect(
+                    "选择雷达图指标",
+                    ["工艺步骤数", "成本指数", "质量要求指数", "主要设备数", "估算生产周期(天)"],
+                    default=["工艺步骤数", "成本指数", "质量要求指数", "主要设备数"]
+                )
+                
+                if len(radar_metrics) >= 3:
+                    # 准备雷达图数据
+                    radar_data = []
+                    
+                    for idx, row in comparison_df.iterrows():
+                        values = []
+                        for metric in radar_metrics:
+                            values.append(row[metric])
+                        
+                        # 标准化数据（0-1范围）
+                        max_val = comparison_df[metric].max()
+                        min_val = comparison_df[metric].min()
+                        if max_val > min_val:
+                            normalized_values = [(v - min_val) / (max_val - min_val) for v in values]
+                        else:
+                            normalized_values = [0.5 for _ in values]
+                        
+                        radar_data.append(go.Scatterpolar(
+                            r=normalized_values + [normalized_values[0]],  # 闭合图形
+                            theta=radar_metrics + [radar_metrics[0]],
+                            fill='toself',
+                            name=f"{row['产品名称']} ({row['所属分类']})"
+                        ))
+                    
+                    # 创建雷达图
+                    radar_fig = go.Figure(data=radar_data)
+                    radar_fig.update_layout(
+                        polar=dict(
+                            radialaxis=dict(
+                                visible=True,
+                                range=[0, 1]
+                            )
+                        ),
+                        title="产品工艺多维度对比雷达图",
+                        showlegend=True,
+                        height=500
+                    )
+                    
+                    st.plotly_chart(radar_fig, use_container_width=True)
+                else:
+                    st.warning("请选择至少3个指标进行雷达图对比")
+            
+            with tab3:
+                st.subheader("详细工艺步骤对比")
+                
+                # 选择要对比详细步骤的产品
+                selected_detailed = st.selectbox(
+                    "选择产品查看详细步骤",
+                    comparison_df["产品名称"].tolist()
+                )
+                
+                if selected_detailed:
+                    # 找到对应的主分类和产品
+                    for product_path in selected_comparison:
+                        parts = product_path.split(" | ")
+                        if len(parts) == 2 and parts[1] == selected_detailed:
+                            main_cat = parts[0]
+                            product_info = PharmaceuticalProcesses.get_product_info(main_cat, selected_detailed)
+                            
+                            if product_info:
+                                steps = product_info.get("工艺步骤", [])
+                                
+                                st.write(f"### {selected_detailed} 详细工艺步骤")
+                                
+                                # 创建步骤对比表格
+                                step_data = []
+                                for i, step in enumerate(steps, 1):
+                                    step_data.append({
+                                        "步骤顺序": i,
+                                        "步骤名称": step["name"],
+                                        "关键参数数": len(step.get("关键参数", [])),
+                                        "设备数": len(step.get("设备", [])),
+                                        "关键参数示例": ", ".join(step.get("关键参数", [])[:3]) + ("..." if len(step.get("关键参数", [])) > 3 else ""),
+                                        "主要设备": ", ".join(step.get("设备", [])[:2]) + ("..." if len(step.get("设备", [])) > 2 else "")
+                                    })
+                                
+                                step_df = pd.DataFrame(step_data)
+                                
+                                st.dataframe(
+                                    step_df,
+                                    column_config={
+                                        "步骤顺序": st.column_config.NumberColumn("序号"),
+                                        "步骤名称": st.column_config.TextColumn("步骤名称"),
+                                        "关键参数数": st.column_config.NumberColumn("参数数"),
+                                        "设备数": st.column_config.NumberColumn("设备数"),
+                                        "关键参数示例": st.column_config.TextColumn(
+                                            "关键参数",
+                                            width="medium"
+                                        ),
+                                        "主要设备": st.column_config.TextColumn(
+                                            "主要设备",
+                                            width="medium"
+                                        )
+                                    },
+                                    use_container_width=True,
+                                    hide_index=True
+                                )
+                            
+                            break
+                
+                # 步骤数分布对比
+                st.subheader("各产品工艺步骤分布对比")
+                
+                # 收集所有产品的步骤数
+                all_steps_data = []
+                for product_path in selected_comparison:
+                    parts = product_path.split(" | ")
+                    if len(parts) == 2:
+                        main_cat, product = parts
+                        product_info = PharmaceuticalProcesses.get_product_info(main_cat, product)
+                        if product_info:
+                            steps = product_info.get("工艺步骤", [])
+                            all_steps_data.append({
+                                "产品": product,
+                                "分类": main_cat,
+                                "步骤数": len(steps)
+                            })
+                
+                if all_steps_data:
+                    steps_df = pd.DataFrame(all_steps_data)
+                    
+                    fig3 = px.box(
+                        steps_df,
+                        x="分类",
+                        y="步骤数",
+                        color="分类",
+                        points="all",
+                        title="各类产品工艺步骤数分布"
+                    )
+                    
+                    st.plotly_chart(fig3, use_container_width=True)
+    
+    else:
+        st.info("请在侧边栏选择要对比的产品")
+
+else:  # 分类概览
+    st.header("🌐 制药品类工艺概览")
+    
+    # 获取所有产品数据用于概览分析
+    all_products_data = []
+    
+    for main_cat in PharmaceuticalProcesses.get_main_categories():
+        for product in PharmaceuticalProcesses.get_products(main_cat):
+            product_info = PharmaceuticalProcesses.get_product_info(main_cat, product)
+            if product_info:
+                steps = product_info.get("工艺步骤", [])
+                all_products_data.append({
+                    "产品": product,
+                    "分类": main_cat,
+                    "子分类": main_cat.split("-")[-1] if "-" in main_cat else main_cat,
+                    "步骤数": len(steps),
+                    "关键参数总数": sum(len(step.get("关键参数", [])) for step in steps),
+                    "设备种类数": len(set([equip for step in steps for equip in step.get("设备", [])]))
+                })
+    
+    if all_products_data:
+        overview_df = pd.DataFrame(all_products_data)
+        
+        # 根据概览类型显示不同图表
+        if 'overview_type' in locals() and overview_type == "工艺步骤数对比":
+            st.subheader("各品类工艺步骤数对比")
+            
+            # 按分类统计平均步骤数
+            category_stats = overview_df.groupby("分类").agg({
+                "步骤数": ["mean", "min", "max", "count"]
+            }).round(1).reset_index()
+            
+            category_stats.columns = ["分类", "平均步骤数", "最少步骤数", "最多步骤数", "产品数量"]
+            
+            # 显示统计表
+            st.dataframe(category_stats, use_container_width=True)
+            
+            # 创建分类对比图
+            fig = px.bar(
+                category_stats,
+                x="分类",
+                y="平均步骤数",
+                error_y="最多步骤数",
+                title="各分类平均工艺步骤数对比",
+                color="分类",
+                text="平均步骤数",
+                hover_data=["产品数量", "最少步骤数"]
+            )
+            
+            fig.update_traces(textposition='outside')
+            fig.update_layout(
+                xaxis_title="产品分类",
+                yaxis_title="平均工艺步骤数",
+                showlegend=False
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+            
+        elif overview_type == "工艺复杂度雷达图":
+            st.subheader("工艺复杂度多维度分析")
+            
+            # 选择要分析的产品
+            selected_products = st.multiselect(
+                "选择产品进行复杂度分析",
+                overview_df["产品"].tolist(),
+                default=overview_df["产品"].tolist()[:5] if len(overview_df) >= 5 else overview_df["产品"].tolist()
+            )
+            
+            if selected_products:
+                selected_df = overview_df[overview_df["产品"].isin(selected_products)]
+                
+                # 创建雷达图
+                radar_metrics = ["步骤数", "关键参数总数", "设备种类数"]
+                
+                radar_data = []
+                for _, row in selected_df.iterrows():
+                    values = [row["步骤数"], row["关键参数总数"], row["设备种类数"]]
+                    
+                    # 标准化
+                    max_vals = selected_df[["步骤数", "关键参数总数", "设备种类数"]].max()
+                    min_vals = selected_df[["步骤数", "关键参数总数", "设备种类数"]].min()
+                    
+                    normalized_values = []
+                    for i, metric in enumerate(radar_metrics):
+                        if max_vals[i] > min_vals[i]:
+                            norm_val = (values[i] - min_vals[i]) / (max_vals[i] - min_vals[i])
+                        else:
+                            norm_val = 0.5
+                        normalized_values.append(norm_val)
+                    
+                    radar_data.append(go.Scatterpolar(
+                        r=normalized_values + [normalized_values[0]],
+                        theta=radar_metrics + [radar_metrics[0]],
+                        fill='toself',
+                        name=f"{row['产品']} ({row['分类']})"
+                    ))
+                
+                radar_fig = go.Figure(data=radar_data)
+                radar_fig.update_layout(
+                    polar=dict(
+                        radialaxis=dict(
+                            visible=True,
+                            range=[0, 1]
+                        )
+                    ),
+                    title="产品工艺复杂度雷达图",
+                    showlegend=True,
+                    height=500
+                )
+                
+                st.plotly_chart(radar_fig, use_container_width=True)
+        
+        elif overview_type == "设备需求对比":
+            st.subheader("设备需求分析")
+            
+            # 创建设备需求热力图
+            fig = px.density_heatmap(
+                overview_df,
+                x="分类",
+                y="步骤数",
+                z="设备种类数",
+                title="设备需求与工艺复杂度关系",
+                color_continuous_scale="Viridis"
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # 显示设备需求排名
+            st.subheader("设备需求排名")
+            
+            # 按产品排序显示设备需求
+            sorted_df = overview_df.sort_values("设备种类数", ascending=False)
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write("**设备需求最高的产品:**")
+                top_5 = sorted_df.head(5)
+                for _, row in top_5.iterrows():
+                    st.write(f"- {row['产品']} ({row['分类']}): {row['设备种类数']}种设备")
+            
+            with col2:
+                st.write("**设备需求最低的产品:**")
+                bottom_5 = sorted_df.tail(5)
+                for _, row in bottom_5.iterrows():
+                    st.write(f"- {row['产品']} ({row['分类']}): {row['设备种类数']}种设备")
+    else:
+        st.info("暂无数据可用于概览分析")
+
+# 页脚
+st.markdown("---")
+st.markdown(
+    """
+    <div style='text-align: center'>
+        <p>⚗️ 制药工艺流程对比系统 | 专注于展示不同制药品类的工艺差异</p>
+        <p style='font-size: 0.9em; color: #666;'>
+            数据来源: 制药工艺专业资料整理 | 版本 1.0 | 更新日期: 2024年
+        </p>
+        <p style='font-size: 0.8em; color: #999;'>
+            涵盖化学药物、生物制品、中药、新型制剂等全品类生产工艺
+        </p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
